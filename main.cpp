@@ -5,11 +5,15 @@
 #include <ctime>
 #include <stdlib.h>
 using namespace std;
+const int SIZE = 15 + 2;
+const int CoinsOnLevel = 3;
 
 class runner {
 private:
 	int PosX;
 	int PosY;
+	int coins = 0;
+	int points = 0;
 public:
 	runner(int PosX, int PosY) {
 		this->PosX = PosX;
@@ -17,8 +21,18 @@ public:
 	}
 	int GetPosX() { return PosX; }
 	int GetPosY() { return PosY; }
+	int GetCoins() { return coins; }
+	int GetPoints() { return points; }
 	void SetPosX(int PosX) { this->PosX = PosX; }
 	void SetPosY(int PosY) { this->PosY = PosY; }
+	void SetPos(int cellId) {
+		this->PosX = cellId % SIZE;
+		this->PosY = cellId / SIZE;
+	}
+	void SetCoins(int coins) { this->coins = coins; }
+	void AddCoins(int coins) { this->coins += coins; }
+	void SetPoints(int points) { this->points = points; }
+	void AddPoints(int points) { this->points += points; }
 };
 runner player(1, 1);
 
@@ -77,7 +91,7 @@ public:
 	}
 };
 
-const int SIZE = 25 + 2;
+
 vector <room> maze;
 vector <int> path;
 void showMaze() {
@@ -89,57 +103,6 @@ void showMaze() {
 	}
 	cout << endl;
 }
-
-
-void showCells(int midCellId) {
-	maze[midCellId].SetVisible(true);
-	maze[midCellId + SIZE].SetVisible(true);
-	maze[midCellId + 1].SetVisible(true);
-	maze[midCellId - SIZE].SetVisible(true);
-	maze[midCellId - 1].SetVisible(true);
-}
-void playerMove(char way) {
-	switch (way) {
-	case 'w':
-		way = 0;
-		break;
-	case 'd':
-		way = 1;
-		break;
-	case 's':
-		way = 2;
-		break;
-	case 'a':
-		way = 3;
-		break;
-	default:
-		cout << "\n >";
-		cin >> way;
-		return playerMove(way);
-	}
-	int chosenCellId;
-	int thisCellId = (SIZE * player.GetPosY() + player.GetPosX());
-	if (way % 2 == 1) {
-		chosenCellId = thisCellId + 2 - way;
-	}
-	else {
-		chosenCellId = thisCellId + (way - 1) * SIZE;
-	}
-	switch (maze[chosenCellId].GetType()) {
-	case ' ':
-		player.SetPosX(maze[chosenCellId].GetPosX());
-		player.SetPosY(maze[chosenCellId].GetPosY());
-		break;
-	case '@':
-		player.SetPosX(maze[chosenCellId].GetPosX());
-		player.SetPosY(maze[chosenCellId].GetPosY());
-		cout << "\nEEEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAHHHHHHHHHHHHH!!!!!!!!!!!!!!\n" << endl;
-		break;
-	default:
-		cout << "\nYou can't go into the wall :(\n" << endl;
-	}
-}
-
 
 
 void levelClear() {
@@ -233,10 +196,65 @@ int levelForm() {
 	if (path.size() < (SIZE - 2) * (SIZE - 2) / 2) {
 		return levelForm();
 	}
-	maze[path[rand() % path.size()]].SetType('@');
+	int buf;
+	for (int i = 0; i < CoinsOnLevel; i++) {
+		buf = rand() % path.size();
+		maze[path[buf]].SetType('@');
+		path.erase(path.begin() + buf);
+	}
 	return path.size();
 }
 
+
+void showCells(int midCellId) {
+	maze[midCellId].SetVisible(true);
+	maze[midCellId + SIZE].SetVisible(true);
+	maze[midCellId + 1].SetVisible(true);
+	maze[midCellId - SIZE].SetVisible(true);
+	maze[midCellId - 1].SetVisible(true);
+}
+void playerMove(char way) {
+	switch (way) {
+	case 'w':
+		way = 0;
+		break;
+	case 'd':
+		way = 1;
+		break;
+	case 's':
+		way = 2;
+		break;
+	case 'a':
+		way = 3;
+		break;
+	default:
+		cout << "\n >";
+		cin >> way;
+		return playerMove(way);
+	}
+	int chosenCellId;
+	int thisCellId = (SIZE * player.GetPosY() + player.GetPosX());
+	if (way % 2 == 1) {
+		chosenCellId = thisCellId + 2 - way;
+	}
+	else {
+		chosenCellId = thisCellId + (way - 1) * SIZE;
+	}
+	switch (maze[chosenCellId].GetType()) {
+	case ' ':
+		player.SetPosX(maze[chosenCellId].GetPosX());
+		player.SetPosY(maze[chosenCellId].GetPosY());
+		break;
+	case '@':
+		player.SetPosX(maze[chosenCellId].GetPosX());
+		player.SetPosY(maze[chosenCellId].GetPosY());
+		player.AddCoins(1);
+		maze[chosenCellId].SetType(' ');
+		break;
+	default:
+		cout << "\nYou can't go into the wall :(\n" << endl;
+	}
+}
 
 
 int main() {
@@ -246,7 +264,7 @@ int main() {
 	while (true) {
 		showCells(player.GetPosY() * SIZE + player.GetPosX());
 		showMaze();
-		cout << '\n' << " >";
+		cout << "Now you're have " << player.GetCoins() << " coins.\n" << " >";
 		cin >> way;
 		system("Cls");
 		for (int i = 0; i < 20; i++) {
