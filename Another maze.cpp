@@ -84,6 +84,51 @@ void showMaze() {
 }
 
 
+
+void playerMove(char way) {
+	switch (way) {
+	case 'w':
+		way = 0;
+		break;
+	case 'd':
+		way = 1;
+		break;
+	case 's':
+		way = 2;
+		break;
+	case 'a':
+		way = 3;
+		break;
+	default:
+		cout << "\n >";
+		cin >> way;
+		return playerMove(way);
+	}
+	int chosenCellId;
+	int thisCellId = (SIZE * player.GetPosY() + player.GetPosX());
+	if (way % 2 == 1) {
+		chosenCellId = thisCellId + 2 - way;
+	}
+	else {
+		chosenCellId = thisCellId + (way - 1) * SIZE;
+	}
+	switch (maze[chosenCellId].GetType()) {
+	case ' ':
+		player.SetPosX(maze[chosenCellId].GetPosX());
+		player.SetPosY(maze[chosenCellId].GetPosY());
+		break;
+	case '@':
+		player.SetPosX(maze[chosenCellId].GetPosX());
+		player.SetPosY(maze[chosenCellId].GetPosY());
+		cout << "\nEEEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAHHHHHHHHHHHHH!!!!!!!!!!!!!!\n" << endl;
+		break;
+	default:
+		cout << "\nYou can't go into the wall :(\n" << endl;
+	}
+}
+
+
+
 void levelClear() {
 	maze.clear();
 	for (int i = 0; i < SIZE; i++) {
@@ -143,7 +188,6 @@ void levelWorm(int x, int y, int enter) {
 		}
 	}
 }
-
 void scout(int cellId) {
 	path.push_back(cellId);
 	maze[cellId].SetType(' ');
@@ -161,7 +205,6 @@ void scout(int cellId) {
 		scout(cellId - 1);
 	}
 }
-
 int levelForm() {
 	levelClear();
 	path.clear();
@@ -186,5 +229,14 @@ int levelForm() {
 int main() {
 	srand(time(0));
 	cout << levelForm() << endl << "\x1b[47m";
-	showMaze();
+	char way;
+	while (true) {
+		showMaze();
+		cout << '\n' << " >";
+		cin >> way;
+		for (int i = 0; i < 20; i++) {
+			cout << '\n';
+		}
+		playerMove(way);
+	}
 }
