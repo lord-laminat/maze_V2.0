@@ -4,6 +4,23 @@
 #include <vector>
 #include <ctime>
 using namespace std;
+
+class runner {
+private:
+	int PosX;
+	int PosY;
+public:
+	runner(int PosX, int PosY) {
+		this->PosX = PosX;
+		this->PosY = PosY;
+	}
+	int GetPosX() { return PosX; }
+	int GetPosY() { return PosY; }
+	void SetPosX(int PosX) { this->PosX = PosX; }
+	void SetPosY(int PosY) { this->PosY = PosY; }
+};
+runner player(1, 1);
+
 class room {
 private:
 	char type = '*';
@@ -29,12 +46,33 @@ public:
 	}
 
 	void repr() {
-		cout << ' ' << type << ' ';
+		switch (type) {
+		case ' ':
+			if (PosX == player.GetPosX() and PosY == player.GetPosY()) {
+				cout << "\x1b[1;32m" << " I " << "\x1b[0m";
+			}
+			else {
+				cout << "   ";
+			}
+			break;
+		/*
+		case 'X':
+			cout << " X ";
+			break;
+		*/
+		case '@':
+			cout << "\x1b[33;1m @ \x1b[0m";
+			break;
+		default:
+			cout << "\x1b[47m   \x1b[0m";
+			break;
+		}
 	}
 };
 
 const int SIZE = 15 + 2;
 vector <room> maze;
+vector <int> path;
 void showMaze() {
 	for (int i = 0; i < SIZE; i++) {
 		for (int j = 0; j < SIZE; j++) {
@@ -54,7 +92,7 @@ void levelClear() {
 	for (int i = 0; i < SIZE - 2; i++) {
 		maze.push_back('X');
 		for (int j = 0; j < SIZE - 2; j++) {
-			maze.push_back(room());
+			maze.push_back(room(j+1, i+1, '*'));
 		}
 		maze.push_back('X');
 	}
@@ -106,27 +144,27 @@ void levelWorm(int x, int y, int enter) {
 	}
 }
 
-int scout(int cellId) {
-	int TL = 1;
+void scout(int cellId) {
+	path.push_back(cellId);
 	maze[cellId].SetType(' ');
 	//showMaze();
 	if (maze[cellId - SIZE].GetType() == '+') {
-		TL += scout(cellId - SIZE);
+		scout(cellId - SIZE);
 	}
 	if (maze[cellId + 1].GetType() == '+') {
-		TL += scout(cellId + 1);
+		scout(cellId + 1);
 	}
 	if (maze[cellId + SIZE].GetType() == '+') {
-		TL += scout(cellId + SIZE);
+		scout(cellId + SIZE);
 	}
 	if (maze[cellId - 1].GetType()  == '+') {
-		TL += scout(cellId - 1);
+		scout(cellId - 1);
 	}
-	return TL;
 }
 
 int levelForm() {
 	levelClear();
+	path.clear();
 	levelWorm(SIZE / 2, 1, 0);
 	for (int i = 0; i < SIZE; i++) {
 		for (int j = 0; j < SIZE; j++) {
@@ -135,20 +173,18 @@ int levelForm() {
 			}
 		}
 	}
-	int depth = scout(SIZE + 1);
-	if (depth < (SIZE-2)*(SIZE-2)/2) {
-		levelForm();
+	scout(SIZE + 1);
+	if (path.size() < (SIZE - 2) * (SIZE - 2) / 2) {
+		return levelForm();
 	}
-	else {
-		maze[1] = room('-');
-		return depth;
-	}
+	maze[path[rand() % path.size()]].SetType('@');
+	return path.size();
 }
 
 
 
 int main() {
 	srand(time(0));
-	cout << levelForm() << endl;
+	cout << levelForm() << endl << "\x1b[47m";
 	showMaze();
 }
