@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <stdlib.h>
 using namespace std;
 
 class runner {
@@ -23,6 +24,7 @@ runner player(1, 1);
 
 class room {
 private:
+	bool visible = false;
 	char type = '*';
 	int PosX;
 	int PosY;
@@ -44,15 +46,20 @@ public:
 			this->type = type;
 		}
 	}
+	void SetVisible(bool visible) { this->visible = visible; }
 
 	void repr() {
+		if (false /*!visible*/) {
+			cout << "   ";
+			return void();
+		}
 		switch (type) {
 		case ' ':
 			if (PosX == player.GetPosX() and PosY == player.GetPosY()) {
-				cout << "\x1b[1;32m" << " I " << "\x1b[0m";
+				cout << "\x1b[1;44;32m" << " I " << "\x1b[0m";
 			}
 			else {
-				cout << "   ";
+				cout << "\x1b[1;44m   \x1b[0m";
 			}
 			break;
 		/*
@@ -61,7 +68,7 @@ public:
 			break;
 		*/
 		case '@':
-			cout << "\x1b[33;1m @ \x1b[0m";
+			cout << "\x1b[44;33;1m @ \x1b[0m";
 			break;
 		default:
 			cout << "\x1b[47m   \x1b[0m";
@@ -70,7 +77,7 @@ public:
 	}
 };
 
-const int SIZE = 15 + 2;
+const int SIZE = 25 + 2;
 vector <room> maze;
 vector <int> path;
 void showMaze() {
@@ -84,7 +91,13 @@ void showMaze() {
 }
 
 
-
+void showCells(int midCellId) {
+	maze[midCellId].SetVisible(true);
+	maze[midCellId + SIZE].SetVisible(true);
+	maze[midCellId + 1].SetVisible(true);
+	maze[midCellId - SIZE].SetVisible(true);
+	maze[midCellId - 1].SetVisible(true);
+}
 void playerMove(char way) {
 	switch (way) {
 	case 'w':
@@ -228,12 +241,14 @@ int levelForm() {
 
 int main() {
 	srand(time(0));
-	cout << levelForm() << endl << "\x1b[47m";
+	cout << levelForm() << endl;
 	char way;
 	while (true) {
+		showCells(player.GetPosY() * SIZE + player.GetPosX());
 		showMaze();
 		cout << '\n' << " >";
 		cin >> way;
+		system("Cls");
 		for (int i = 0; i < 20; i++) {
 			cout << '\n';
 		}
