@@ -5,24 +5,28 @@
 #include <ctime>
 #include <stdlib.h>
 
+#define SIZE_OF_THE_MAZE 14
+#define COINS_ON_LEVEL 8
+#define COINS_TO_ESCAPE 4
+#define POINTS_FOR_COIN 100
+
 #define COIN '$'
 #define PIT '0'
-#define PLAYER_CHAR 'I'
+#define PLAYER_CHAR '&'
 #define KEY_UP 'w'
+
 #define KEY_RIGHT 'd'
 #define KEY_DOWN 's'
 #define KEY_LEFT 'a'
-
 using namespace std;
-const int SIZE = 10 + 2;
-const int CoinsOnLevel = 3;
+const int SIZE = SIZE_OF_THE_MAZE + 2;
+int points;
 
 class runner {
 private:
 	int PosX;
 	int PosY;
 	int coins = 0;
-	int points = 0;
 public:
 	runner(int PosX, int PosY) {
 		this->PosX = PosX;
@@ -31,7 +35,6 @@ public:
 	int GetPosX() { return PosX; }
 	int GetPosY() { return PosY; }
 	int GetCoins() { return coins; }
-	int GetPoints() { return points; }
 	void SetPosX(int PosX) { this->PosX = PosX; }
 	void SetPosY(int PosY) { this->PosY = PosY; }
 	void SetPos(int cellId) {
@@ -40,8 +43,6 @@ public:
 	}
 	void SetCoins(int coins) { this->coins = coins; }
 	void AddCoins(int coins) { this->coins += coins; }
-	void SetPoints(int points) { this->points = points; }
-	void AddPoints(int points) { this->points += points; }
 };
 runner player(SIZE / 2, 1);
 
@@ -115,7 +116,7 @@ void fallingAnimate(int high) {
 	if (high < 0) { return void(); }
 	for (int h = 15; h > 0; h--) {
 		if (h == high) {
-			cout << "\t\x1b[46m    \x1b[0;1;32m  " << PLAYER_CHAR << "  \x1b[46m    \x1b[0m\n";
+			cout << "\t\x1b[46m    \x1b[0;1;33m  " << PLAYER_CHAR << "  \x1b[46m    \x1b[0m\n";
 		}
 		else {
 			cout << "\t\x1b[46m    \x1b[0m     \x1b[46m    \x1b[0m\n";
@@ -223,7 +224,7 @@ int levelForm(int startCellId) {
 		return levelForm(startCellId);
 	}
 	path.erase(path.begin());
-	for (int i = 0; i < CoinsOnLevel; i++) { generateRoom(COIN); }
+	for (int i = 0; i < COINS_ON_LEVEL; i++) { generateRoom(COIN); }
 	return path.size();
 }
 
@@ -270,14 +271,16 @@ void playerMove(char way) {
 		player.SetPosX(maze[chosenCellId].GetPosX());
 		player.SetPosY(maze[chosenCellId].GetPosY());
 		player.AddCoins(1);
+		points += POINTS_FOR_COIN;
 		maze[chosenCellId].SetType(' ');
-		if (player.GetCoins() % CoinsOnLevel == 0 and player.GetCoins() != 0) {
+		if (player.GetCoins() % COINS_TO_ESCAPE == 0 and player.GetCoins() != 0) {
 			generateRoom(PIT);
 		}
 		break;
 	case PIT:
 		player.SetPosX(maze[chosenCellId].GetPosX());
 		player.SetPosY(maze[chosenCellId].GetPosY());
+		player.SetCoins(0);
 		fallingAnimate(15);
 		levelForm(chosenCellId);
 		break;
@@ -293,7 +296,7 @@ int main() {
 	while (true) {
 		showCells(player.GetPosY() * SIZE + player.GetPosX());
 		showMaze();
-		cout << "Now you're have " << player.GetCoins() << " coins.\n" << " >";
+		cout << "Now you're have " << points << " points.\n" << " >";
 		cin >> way;
 		system("Cls");
 		playerMove(way);
