@@ -281,8 +281,6 @@ void playerMove(char way) {
 		fallingAnimate(15);
 		levelForm(chosenCellId);
 		break;
-	//default:
-		//cout << "\nYou can't go into the wall :(\n" << endl;
 	}
 }
 
