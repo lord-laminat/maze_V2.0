@@ -4,8 +4,17 @@
 #include <vector>
 #include <ctime>
 #include <stdlib.h>
+
+#define COIN '$'
+#define PIT '0'
+#define PLAYER_CHAR 'I'
+#define KEY_UP 'w'
+#define KEY_RIGHT 'd'
+#define KEY_DOWN 's'
+#define KEY_LEFT 'a'
+
 using namespace std;
-const int SIZE = 15 + 2;
+const int SIZE = 10 + 2;
 const int CoinsOnLevel = 3;
 
 class runner {
@@ -34,7 +43,7 @@ public:
 	void SetPoints(int points) { this->points = points; }
 	void AddPoints(int points) { this->points += points; }
 };
-runner player(1, 1);
+runner player(SIZE / 2, 1);
 
 class room {
 private:
@@ -63,26 +72,24 @@ public:
 	void SetVisible(bool visible) { this->visible = visible; }
 
 	void repr() {
-		if (false /*!visible*/) {
+		if (/*false*/ !visible) {
 			cout << "   ";
 			return void();
 		}
 		switch (type) {
 		case ' ':
 			if (PosX == player.GetPosX() and PosY == player.GetPosY()) {
-				cout << "\x1b[1;44;32m" << " I " << "\x1b[0m";
+				cout << "\x1b[44;1;33m " << PLAYER_CHAR << " \x1b[0m";
 			}
 			else {
-				cout << "\x1b[1;44m   \x1b[0m";
+				cout << "\x1b[44m   \x1b[0m";
 			}
 			break;
-		/*
-		case 'X':
-			cout << " X ";
+		case COIN:
+			cout << "\x1b[44;32;1m " << COIN << " \x1b[0m";
 			break;
-		*/
-		case '@':
-			cout << "\x1b[44;33;1m @ \x1b[0m";
+		case PIT:
+			cout << "\x1b[44;1;36m " << PIT << " \x1b[0m";
 			break;
 		default:
 			cout << "\x1b[47m   \x1b[0m";
@@ -103,8 +110,27 @@ void showMaze() {
 	}
 	cout << endl;
 }
+void fallingAnimate(int high) {
+	system("Cls");
+	if (high < 0) { return void(); }
+	for (int h = 15; h > 0; h--) {
+		if (h == high) {
+			cout << "\t\x1b[46m    \x1b[0;1;32m  " << PLAYER_CHAR << "  \x1b[46m    \x1b[0m\n";
+		}
+		else {
+			cout << "\t\x1b[46m    \x1b[0m     \x1b[46m    \x1b[0m\n";
+		}
+	}
+	fallingAnimate(high - 1);
+}
 
-
+int generateRoom(char type) {
+	int buf = rand() % path.size();
+	int cellId = path[buf];
+	maze[cellId].SetType(type);
+	path.erase(path.begin() + buf);
+	return cellId;
+}
 void levelClear() {
 	maze.clear();
 	for (int i = 0; i < SIZE; i++) {
@@ -135,7 +161,7 @@ void levelWorm(int x, int y, int enter) {
 	if (maze[SIZE * y + x - 1].GetType() == '*') {
 		ways.push_back(3);
 	}
-	maze[SIZE * y + x].SetType('@');
+	maze[SIZE * y + x].SetType(COIN);
 	//showMaze();
 	maze[SIZE * y + x].SetType('+');
 	if (ways.size() > 0) {
@@ -181,10 +207,10 @@ void scout(int cellId) {
 		scout(cellId - 1);
 	}
 }
-int levelForm() {
+int levelForm(int startCellId) {
 	levelClear();
 	path.clear();
-	levelWorm(SIZE / 2, 1, 0);
+	levelWorm(startCellId / SIZE, startCellId % SIZE, 0);
 	for (int i = 0; i < SIZE; i++) {
 		for (int j = 0; j < SIZE; j++) {
 			if (maze[SIZE * i + j].GetType() == '*') {
@@ -192,19 +218,14 @@ int levelForm() {
 			}
 		}
 	}
-	scout(SIZE + 1);
+	scout(startCellId);
 	if (path.size() < (SIZE - 2) * (SIZE - 2) / 2) {
-		return levelForm();
+		return levelForm(startCellId);
 	}
-	int buf;
-	for (int i = 0; i < CoinsOnLevel; i++) {
-		buf = rand() % path.size();
-		maze[path[buf]].SetType('@');
-		path.erase(path.begin() + buf);
-	}
+	path.erase(path.begin());
+	for (int i = 0; i < CoinsOnLevel; i++) { generateRoom(COIN); }
 	return path.size();
 }
-
 
 void showCells(int midCellId) {
 	maze[midCellId].SetVisible(true);
@@ -215,16 +236,16 @@ void showCells(int midCellId) {
 }
 void playerMove(char way) {
 	switch (way) {
-	case 'w':
+	case KEY_UP:
 		way = 0;
 		break;
-	case 'd':
+	case KEY_RIGHT:
 		way = 1;
 		break;
-	case 's':
+	case KEY_DOWN:
 		way = 2;
 		break;
-	case 'a':
+	case KEY_LEFT:
 		way = 3;
 		break;
 	default:
@@ -245,31 +266,38 @@ void playerMove(char way) {
 		player.SetPosX(maze[chosenCellId].GetPosX());
 		player.SetPosY(maze[chosenCellId].GetPosY());
 		break;
-	case '@':
+	case COIN:
 		player.SetPosX(maze[chosenCellId].GetPosX());
 		player.SetPosY(maze[chosenCellId].GetPosY());
 		player.AddCoins(1);
 		maze[chosenCellId].SetType(' ');
+		if (player.GetCoins() % CoinsOnLevel == 0 and player.GetCoins() != 0) {
+			generateRoom(PIT);
+		}
 		break;
-	default:
-		cout << "\nYou can't go into the wall :(\n" << endl;
+	case PIT:
+		player.SetPosX(maze[chosenCellId].GetPosX());
+		player.SetPosY(maze[chosenCellId].GetPosY());
+		fallingAnimate(15);
+		levelForm(chosenCellId);
+		break;
+	//default:
+		//cout << "\nYou can't go into the wall :(\n" << endl;
 	}
 }
 
 
 int main() {
 	srand(time(0));
-	cout << levelForm() << endl;
+	cout << levelForm(SIZE + SIZE / 2) << endl;
 	char way;
+	fallingAnimate(15);
 	while (true) {
 		showCells(player.GetPosY() * SIZE + player.GetPosX());
 		showMaze();
 		cout << "Now you're have " << player.GetCoins() << " coins.\n" << " >";
 		cin >> way;
 		system("Cls");
-		for (int i = 0; i < 20; i++) {
-			cout << '\n';
-		}
 		playerMove(way);
 	}
 }
