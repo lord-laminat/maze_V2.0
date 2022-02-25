@@ -9,17 +9,24 @@
 #define COINS_ON_LEVEL 8
 #define COINS_TO_ESCAPE 4
 #define POINTS_FOR_COIN 100
+#define TORCH_DURABILITY 100
+#define FUEL_LOSS 2
+#define FUEL_INDICATOR_LEN 50
+#define FUEL_ON_LEVEL 2
 
 #define COIN '$'
 #define PIT '0'
-#define PLAYER_CHAR '&'
-#define KEY_UP 'w'
+#define PLAYER_CHAR 'I'
+#define FUEL 'U'
 
+#define KEY_UP 'w'
 #define KEY_RIGHT 'd'
 #define KEY_DOWN 's'
 #define KEY_LEFT 'a'
+
 using namespace std;
-const int SIZE = SIZE_OF_THE_MAZE + 2;
+const int SIZE = SIZE_OF_THE_MAZE + 4;
+int torch_fuel = TORCH_DURABILITY;
 int points;
 
 class runner {
@@ -48,11 +55,11 @@ runner player(SIZE / 2, 1);
 
 class room {
 private:
-	bool visible = false;
 	char type = '*';
 	int PosX;
 	int PosY;
 public:
+
 	room() {}
 	room(char type) { this->type = type; }
 	room(int PosX, int PosY, char type) {
@@ -70,10 +77,10 @@ public:
 			this->type = type;
 		}
 	}
-	void SetVisible(bool visible) { this->visible = visible; }
 
-	void repr() {
-		if (/*false*/ !visible) {
+	
+	void repr(bool isNearPlayer) {
+		if (/*false*/ !isNearPlayer) {
 			cout << "   ";
 			return void();
 		}
@@ -87,10 +94,13 @@ public:
 			}
 			break;
 		case COIN:
-			cout << "\x1b[44;32;1m " << COIN << " \x1b[0m";
+			cout << "\x1b[44;1;32m " << COIN << " \x1b[0m";
 			break;
 		case PIT:
 			cout << "\x1b[44;1;36m " << PIT << " \x1b[0m";
+			break;
+		case FUEL:
+			cout << "\x1b[44;1;31m " << FUEL << " \x1b[0m";
 			break;
 		default:
 			cout << "\x1b[47m   \x1b[0m";
@@ -98,14 +108,70 @@ public:
 		}
 	}
 };
-
-
 vector <room> maze;
 vector <int> path;
+
+bool nearPlayer(int PosX, int PosY) {
+	/*if (abs(player.GetPosX() - PosX) < 2 and abs(player.GetPosY() - PosY) < 2 and (PosX == player.GetPosX() or PosY == player.GetPosY())) {
+		return true;
+	}*/
+	if (abs(player.GetPosX() - PosX) < 2 and abs(player.GetPosY() - PosY) < 2 and ((maze[player.GetPosX() + SIZE * PosY].GetType() != '#' and maze[player.GetPosX() + SIZE * PosY].GetType() != 'X') or (maze[PosX + SIZE * player.GetPosY()].GetType() != '#' and maze[PosX + SIZE * player.GetPosY()].GetType() != 'X'))) {
+		return true;
+	}
+	else if (player.GetPosX() - PosX == -2 and maze[PosY * SIZE + PosX - 1].GetType() != '#' and maze[PosY * SIZE + PosX - 1].GetType() != 'X' and player.GetPosY() == PosY) {
+		return true;
+	}
+	else if (player.GetPosX() - PosX == 2 and maze[PosY * SIZE + PosX + 1].GetType() != '#' and maze[PosY * SIZE + PosX + 1].GetType() != 'X' and player.GetPosY() == PosY) {
+		return true;
+	}
+	else if (player.GetPosY() - PosY == -2 and maze[PosX + (PosY - 1) * SIZE].GetType() != '#' and maze[PosX + (PosY - 1) * SIZE].GetType() != 'X' and player.GetPosX() == PosX) {
+		return true;
+	}
+	else if (player.GetPosY() - PosY == 2 and maze[PosX + (PosY + 1) * SIZE].GetType() != '#' and maze[PosX + (PosY + 1) * SIZE].GetType() != 'X' and player.GetPosX() == PosX) {
+		return true;
+	}
+	return false;
+}
+bool torchOFF(int PosX, int PosY) {
+	if (abs(PosX - player.GetPosX()) <= 1 and PosY == player.GetPosY()) {
+		return true;
+	}
+	else if (abs(PosY - player.GetPosY()) <= 1 and PosX == player.GetPosX()) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+void showTorchFuel(int len) {
+	cout << endl << " \x1b[37m";
+	/*for (int k = 0; k < len; k++) {
+		cout << '_';
+	}*/
+	cout << "\n \x1b[33;41m";
+	for (int point = 0; point < (torch_fuel * len) / TORCH_DURABILITY; point++) {
+		cout << '-';
+	}
+	cout << "\x1b[0m";
+	for (int point = 0; point < TORCH_DURABILITY - (torch_fuel * len / TORCH_DURABILITY); point++) {
+		cout << ' ';
+	}
+	cout << "\x1b[37m \n ";
+	/*for (int k = 0; k < len; k++) {
+		cout << "‾";
+	}*/
+	cout  << "\x1b[0m" << endl;
+}
 void showMaze() {
 	for (int i = 0; i < SIZE; i++) {
 		for (int j = 0; j < SIZE; j++) {
-			maze[SIZE * i + j].repr();
+			if (torch_fuel > TORCH_DURABILITY / 3) {
+				maze[SIZE * i + j].repr(nearPlayer(j, i));
+			}
+			else {
+				maze[SIZE * i + j].repr(torchOFF(j, i));
+			}
 		}
 		cout << '\n';
 	}
@@ -225,16 +291,10 @@ int levelForm(int startCellId) {
 	}
 	path.erase(path.begin());
 	for (int i = 0; i < COINS_ON_LEVEL; i++) { generateRoom(COIN); }
+	for (int i = 0; i < FUEL_ON_LEVEL; i++) { generateRoom(FUEL); }
 	return path.size();
 }
 
-void showCells(int midCellId) {
-	maze[midCellId].SetVisible(true);
-	maze[midCellId + SIZE].SetVisible(true);
-	maze[midCellId + 1].SetVisible(true);
-	maze[midCellId - SIZE].SetVisible(true);
-	maze[midCellId - 1].SetVisible(true);
-}
 void playerMove(char way) {
 	switch (way) {
 	case KEY_UP:
@@ -284,21 +344,27 @@ void playerMove(char way) {
 		fallingAnimate(15);
 		levelForm(chosenCellId);
 		break;
+	case FUEL:
+		player.SetPosX(maze[chosenCellId].GetPosX());
+		player.SetPosY(maze[chosenCellId].GetPosY());
+		maze[chosenCellId].SetType(' ');
+		torch_fuel = TORCH_DURABILITY;
 	}
 }
 
-
 int main() {
 	srand(time(0));
-	cout << levelForm(SIZE + SIZE / 2) << endl;
+	levelForm(SIZE + SIZE / 2);
 	char way;
 	fallingAnimate(15);
-	while (true) {
-		showCells(player.GetPosY() * SIZE + player.GetPosX());
+	while (torch_fuel > 0) {
 		showMaze();
+		showTorchFuel(FUEL_INDICATOR_LEN);
 		cout << "Now you're have " << points << " points.\n" << " >";
 		cin >> way;
 		system("Cls");
 		playerMove(way);
+		torch_fuel -= FUEL_LOSS;
 	}
+	cout << "LOOOSER";
 }
