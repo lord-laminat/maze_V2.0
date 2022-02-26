@@ -6,13 +6,13 @@
 #include <stdlib.h>
 
 #define SIZE_OF_THE_MAZE 14
-#define COINS_ON_LEVEL 8
+#define COINS_ON_LEVEL 10
 #define COINS_TO_ESCAPE 4
 #define POINTS_FOR_COIN 100
 #define TORCH_DURABILITY 100
-#define FUEL_LOSS 2
-#define FUEL_INDICATOR_LEN 50
-#define FUEL_ON_LEVEL 2
+#define FUEL_LOSS 1
+#define FUEL_INDICATOR_LEN 10
+#define FUEL_ON_LEVEL 3
 
 #define COIN '$'
 #define PIT '0'
@@ -149,15 +149,10 @@ void showTorchFuel(int len) {
 	/*for (int k = 0; k < len; k++) {
 		cout << '_';
 	}*/
-	cout << "\n \x1b[33;41m";
-	for (int point = 0; point < (torch_fuel * len) / TORCH_DURABILITY; point++) {
-		cout << '-';
+	cout << "\n";
+	for (int point = 0; point <= (torch_fuel * len) / TORCH_DURABILITY; point++) {
+		cout << "\x1b[43m  \x1b[0m ";
 	}
-	cout << "\x1b[0m";
-	for (int point = 0; point < TORCH_DURABILITY - (torch_fuel * len / TORCH_DURABILITY); point++) {
-		cout << ' ';
-	}
-	cout << "\x1b[37m \n ";
 	/*for (int k = 0; k < len; k++) {
 		cout << "‾";
 	}*/
