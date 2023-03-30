@@ -173,7 +173,7 @@ void showMaze() {
 	cout << endl;
 }
 void fallingAnimate(int high) {
-	system("Cls");
+	system("cls||clear");
 	if (high < 0) { return void(); }
 	for (int h = 15; h > 0; h--) {
 		if (h == high) {
@@ -357,9 +357,9 @@ int main() {
 		showTorchFuel(FUEL_INDICATOR_LEN);
 		cout << "Now you're have " << points << " points.\n" << " >";
 		cin >> way;
-		system("Cls");
+		system("cls||clear");
 		playerMove(way);
 		torch_fuel -= FUEL_LOSS;
 	}
-	cout << "LOOOSER";
+	cout << "LOOOSER\nScore: " << points;
 }
