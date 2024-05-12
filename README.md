@@ -6,4 +6,5 @@ The project is a competition. I'm making a console maze in C++. Must be present:
 3. Scoring system;
 4. Start and finish points;
 
+You can try it online [HERE](https://onlinegdb.com/rN6YRuexu)
 # Good luck to me :)
