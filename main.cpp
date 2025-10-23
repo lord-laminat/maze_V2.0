@@ -2,8 +2,19 @@
 #include <random>
 #include <string>
 #include <vector>
-#include <ctime>
+#include <chrono>
+#include <thread>
 #include <stdlib.h>
+#include <cctype>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <conio.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#include <sys/select.h>
+#endif
 
 #define SIZE_OF_THE_MAZE 14
 #define COINS_ON_LEVEL 10
@@ -25,9 +36,19 @@
 #define KEY_LEFT 'a'
 
 using namespace std;
-const int SIZE = SIZE_OF_THE_MAZE + 4;
+const int MAZE_SIZE = SIZE_OF_THE_MAZE + 4;
 int torch_fuel = TORCH_DURABILITY;
 int points;
+
+void enableANSI() {
+#ifdef _WIN32
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD dwMode = 0;
+	GetConsoleMode(hOut, &dwMode);
+	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	SetConsoleMode(hOut, dwMode);
+#endif
+}
 
 class runner {
 private:
@@ -45,13 +66,13 @@ public:
 	void SetPosX(int PosX) { this->PosX = PosX; }
 	void SetPosY(int PosY) { this->PosY = PosY; }
 	void SetPos(int cellId) {
-		this->PosX = cellId % SIZE;
-		this->PosY = cellId / SIZE;
+		this->PosX = cellId % MAZE_SIZE;
+		this->PosY = cellId / MAZE_SIZE;
 	}
 	void SetCoins(int coins) { this->coins = coins; }
 	void AddCoins(int coins) { this->coins += coins; }
 };
-runner player(SIZE / 2, 1);
+runner player(MAZE_SIZE / 2, 1);
 
 class room {
 private:
@@ -115,19 +136,19 @@ bool nearPlayer(int PosX, int PosY) {
 	/*if (abs(player.GetPosX() - PosX) < 2 and abs(player.GetPosY() - PosY) < 2 and (PosX == player.GetPosX() or PosY == player.GetPosY())) {
 		return true;
 	}*/
-	if (abs(player.GetPosX() - PosX) < 2 and abs(player.GetPosY() - PosY) < 2 and ((maze[player.GetPosX() + SIZE * PosY].GetType() != '#' and maze[player.GetPosX() + SIZE * PosY].GetType() != 'X') or (maze[PosX + SIZE * player.GetPosY()].GetType() != '#' and maze[PosX + SIZE * player.GetPosY()].GetType() != 'X'))) {
+	if (abs(player.GetPosX() - PosX) < 2 and abs(player.GetPosY() - PosY) < 2 and ((maze[player.GetPosX() + MAZE_SIZE * PosY].GetType() != '#' and maze[player.GetPosX() + MAZE_SIZE * PosY].GetType() != 'X') or (maze[PosX + MAZE_SIZE * player.GetPosY()].GetType() != '#' and maze[PosX + MAZE_SIZE * player.GetPosY()].GetType() != 'X'))) {
 		return true;
 	}
-	else if (player.GetPosX() - PosX == -2 and maze[PosY * SIZE + PosX - 1].GetType() != '#' and maze[PosY * SIZE + PosX - 1].GetType() != 'X' and player.GetPosY() == PosY) {
+	else if (player.GetPosX() - PosX == -2 and maze[PosY * MAZE_SIZE + PosX - 1].GetType() != '#' and maze[PosY * MAZE_SIZE + PosX - 1].GetType() != 'X' and player.GetPosY() == PosY) {
 		return true;
 	}
-	else if (player.GetPosX() - PosX == 2 and maze[PosY * SIZE + PosX + 1].GetType() != '#' and maze[PosY * SIZE + PosX + 1].GetType() != 'X' and player.GetPosY() == PosY) {
+	else if (player.GetPosX() - PosX == 2 and maze[PosY * MAZE_SIZE + PosX + 1].GetType() != '#' and maze[PosY * MAZE_SIZE + PosX + 1].GetType() != 'X' and player.GetPosY() == PosY) {
 		return true;
 	}
-	else if (player.GetPosY() - PosY == -2 and maze[PosX + (PosY - 1) * SIZE].GetType() != '#' and maze[PosX + (PosY - 1) * SIZE].GetType() != 'X' and player.GetPosX() == PosX) {
+	else if (player.GetPosY() - PosY == -2 and maze[PosX + (PosY - 1) * MAZE_SIZE].GetType() != '#' and maze[PosX + (PosY - 1) * MAZE_SIZE].GetType() != 'X' and player.GetPosX() == PosX) {
 		return true;
 	}
-	else if (player.GetPosY() - PosY == 2 and maze[PosX + (PosY + 1) * SIZE].GetType() != '#' and maze[PosX + (PosY + 1) * SIZE].GetType() != 'X' and player.GetPosX() == PosX) {
+	else if (player.GetPosY() - PosY == 2 and maze[PosX + (PosY + 1) * MAZE_SIZE].GetType() != '#' and maze[PosX + (PosY + 1) * MAZE_SIZE].GetType() != 'X' and player.GetPosX() == PosX) {
 		return true;
 	}
 	return false;
@@ -159,13 +180,13 @@ void showTorchFuel(int len) {
 	cout  << "\x1b[0m" << endl;
 }
 void showMaze() {
-	for (int i = 0; i < SIZE; i++) {
-		for (int j = 0; j < SIZE; j++) {
+	for (int i = 0; i < MAZE_SIZE; i++) {
+		for (int j = 0; j < MAZE_SIZE; j++) {
 			if (torch_fuel > TORCH_DURABILITY / 3) {
-				maze[SIZE * i + j].repr(nearPlayer(j, i));
+				maze[MAZE_SIZE * i + j].repr(nearPlayer(j, i));
 			}
 			else {
-				maze[SIZE * i + j].repr(torchOFF(j, i));
+				maze[MAZE_SIZE * i + j].repr(torchOFF(j, i));
 			}
 		}
 		cout << '\n';
@@ -173,7 +194,7 @@ void showMaze() {
 	cout << endl;
 }
 void fallingAnimate(int high) {
-	//system("cls||clear");
+	cout << "\033[2J\033[H";
 	if (high < 0) { return void(); }
 	for (int h = 15; h > 0; h--) {
 		if (h == high) {
@@ -183,6 +204,7 @@ void fallingAnimate(int high) {
 			cout << "\t\x1b[46m    \x1b[0m     \x1b[46m    \x1b[0m\n";
 		}
 	}
+	this_thread::sleep_for(chrono::milliseconds(100));
 	fallingAnimate(high - 1);
 }
 
@@ -195,58 +217,58 @@ int generateRoom(char type) {
 }
 void levelClear() {
 	maze.clear();
-	for (int i = 0; i < SIZE; i++) {
+	for (int i = 0; i < MAZE_SIZE; i++) {
 		maze.push_back(room('X'));
 	}
-	for (int i = 0; i < SIZE - 2; i++) {
+	for (int i = 0; i < MAZE_SIZE - 2; i++) {
 		maze.push_back('X');
-		for (int j = 0; j < SIZE - 2; j++) {
+		for (int j = 0; j < MAZE_SIZE - 2; j++) {
 			maze.push_back(room(j+1, i+1, '*'));
 		}
 		maze.push_back('X');
 	}
-	for (int i = 0; i < SIZE; i++) {
+	for (int i = 0; i < MAZE_SIZE; i++) {
 		maze.push_back(room('X'));
 	}
 }
 void levelWorm(int x, int y, int enter) {
 	vector <int> ways;
-	if (maze[SIZE * (y - 1) + x].GetType() == '*') {
+	if (maze[MAZE_SIZE * (y - 1) + x].GetType() == '*') {
 		ways.push_back(0);
 	}
-	if (maze[SIZE * y + x + 1].GetType() == '*') {
+	if (maze[MAZE_SIZE * y + x + 1].GetType() == '*') {
 		ways.push_back(1);
 	}
-	if (maze[SIZE * (y + 1) + x].GetType() == '*') {
+	if (maze[MAZE_SIZE * (y + 1) + x].GetType() == '*') {
 		ways.push_back(2);
 	}
-	if (maze[SIZE * y + x - 1].GetType() == '*') {
+	if (maze[MAZE_SIZE * y + x - 1].GetType() == '*') {
 		ways.push_back(3);
 	}
-	maze[SIZE * y + x].SetType(COIN);
+	maze[MAZE_SIZE * y + x].SetType(COIN);
 	//showMaze();
-	maze[SIZE * y + x].SetType('+');
+	maze[MAZE_SIZE * y + x].SetType('+');
 	if (ways.size() > 0) {
 		int way = ways[rand() % ways.size()];
 		if (way % 2 == 1) {
-			maze[SIZE * (y + 1) + x].SetType('#');
-			maze[SIZE * (y - 1) + x].SetType('#');
+			maze[MAZE_SIZE * (y + 1) + x].SetType('#');
+			maze[MAZE_SIZE * (y - 1) + x].SetType('#');
 			if (enter % 2 == 0) {
-				maze[SIZE * (y + enter - 1) + x].SetType('+');
+				maze[MAZE_SIZE * (y + enter - 1) + x].SetType('+');
 			}
 			else {
-				maze[SIZE * y + x + 2 - enter].SetType('+');
+				maze[MAZE_SIZE * y + x + 2 - enter].SetType('+');
 			}
 			levelWorm(x + 2 - way, y, (way + 2) % 4);
 		}
 		else {
-			maze[SIZE * y + x + 1].SetType('#');
-			maze[SIZE * y + x - 1].SetType('#');
+			maze[MAZE_SIZE * y + x + 1].SetType('#');
+			maze[MAZE_SIZE * y + x - 1].SetType('#');
 			if (enter % 2 == 0) {
-				maze[SIZE * (y + enter - 1) + x].SetType('+');
+				maze[MAZE_SIZE * (y + enter - 1) + x].SetType('+');
 			}
 			else {
-				maze[SIZE * y + x + 2 - enter].SetType('+');
+				maze[MAZE_SIZE * y + x + 2 - enter].SetType('+');
 			}
 			levelWorm(x, y + way - 1, (way + 2) % 4);
 		}
@@ -256,14 +278,14 @@ void scout(int cellId) {
 	path.push_back(cellId);
 	maze[cellId].SetType(' ');
 	//showMaze();
-	if (maze[cellId - SIZE].GetType() == '+') {
-		scout(cellId - SIZE);
+	if (maze[cellId - MAZE_SIZE].GetType() == '+') {
+		scout(cellId - MAZE_SIZE);
 	}
 	if (maze[cellId + 1].GetType() == '+') {
 		scout(cellId + 1);
 	}
-	if (maze[cellId + SIZE].GetType() == '+') {
-		scout(cellId + SIZE);
+	if (maze[cellId + MAZE_SIZE].GetType() == '+') {
+		scout(cellId + MAZE_SIZE);
 	}
 	if (maze[cellId - 1].GetType()  == '+') {
 		scout(cellId - 1);
@@ -272,16 +294,16 @@ void scout(int cellId) {
 int levelForm(int startCellId) {
 	levelClear();
 	path.clear();
-	levelWorm(startCellId / SIZE, startCellId % SIZE, 0);
-	for (int i = 0; i < SIZE; i++) {
-		for (int j = 0; j < SIZE; j++) {
-			if (maze[SIZE * i + j].GetType() == '*') {
+	levelWorm(startCellId / MAZE_SIZE, startCellId % MAZE_SIZE, 0);
+	for (int i = 0; i < MAZE_SIZE; i++) {
+		for (int j = 0; j < MAZE_SIZE; j++) {
+			if (maze[MAZE_SIZE * i + j].GetType() == '*') {
 				levelWorm(j, i, rand() % 4);
 			}
 		}
 	}
 	scout(startCellId);
-	if (path.size() < (SIZE - 2) * (SIZE - 2) / 2) {
+	if (path.size() < (MAZE_SIZE - 2) * (MAZE_SIZE - 2) / 2) {
 		return levelForm(startCellId);
 	}
 	path.erase(path.begin());
@@ -305,17 +327,15 @@ void playerMove(char way) {
 		way = 3;
 		break;
 	default:
-		cout << "\n >";
-		cin >> way;
-		return playerMove(way);
+		return;
 	}
 	int chosenCellId;
-	int thisCellId = (SIZE * player.GetPosY() + player.GetPosX());
+	int thisCellId = (MAZE_SIZE * player.GetPosY() + player.GetPosX());
 	if (way % 2 == 1) {
 		chosenCellId = thisCellId + 2 - way;
 	}
 	else {
-		chosenCellId = thisCellId + (way - 1) * SIZE;
+		chosenCellId = thisCellId + (way - 1) * MAZE_SIZE;
 	}
 	switch (maze[chosenCellId].GetType()) {
 	case ' ':
@@ -347,18 +367,82 @@ void playerMove(char way) {
 	}
 }
 
+char readKey() {
+#ifdef _WIN32
+	int ch = _getch();
+	if (ch == 0 || ch == 0xE0) {
+		int ch2 = _getch();
+		switch (ch2) {
+		case 72: return KEY_UP;
+		case 80: return KEY_DOWN;
+		case 75: return KEY_LEFT;
+		case 77: return KEY_RIGHT;
+		default: return 0;
+		}
+	}
+	if (ch == 27) return 27; // Esc
+	return (char)ch;
+#else
+	struct termios oldt, newt;
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+	int c = getchar();
+	if (c == 27) {
+		fd_set set;
+		struct timeval tv;
+		FD_ZERO(&set);
+		FD_SET(STDIN_FILENO, &set);
+		tv.tv_sec = 0;
+		tv.tv_usec = 100000;
+		int rv = select(STDIN_FILENO + 1, &set, NULL, NULL, &tv);
+		if (rv > 0) {
+			int c2 = getchar();
+			if (c2 == '[') {
+				int c3 = getchar();
+				char ret = 0;
+				if (c3 == 'A') ret = KEY_UP;
+				else if (c3 == 'B') ret = KEY_DOWN;
+				else if (c3 == 'C') ret = KEY_RIGHT;
+				else if (c3 == 'D') ret = KEY_LEFT;
+				tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+				return ret ? ret : 27;
+			}
+			else {
+				tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+				return 27;
+			}
+		}
+		else {
+			tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+			return 27;
+		}
+	}
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	return (char)c;
+#endif
+}
+
 int main() {
 	srand(time(0));
-	levelForm(SIZE + SIZE / 2);
-	char way;
+	enableANSI();
+	levelForm(MAZE_SIZE + MAZE_SIZE / 2);
+    char way;
 	fallingAnimate(15);
-	while (torch_fuel > 0) {
-		showMaze();
-		showTorchFuel(FUEL_INDICATOR_LEN);
-		cout << "Now you're have " << points << " points.\n" << " >";
-		cin >> way;
-		//system("cls||clear");
-		playerMove(way);
+		while (torch_fuel > 0) {
+			showMaze();
+			showTorchFuel(FUEL_INDICATOR_LEN);
+			cout << "Now you have " << points << " points.\n";
+			char raw = readKey();
+			if (raw == 27) {
+				cout << "\033[2J\033[H";
+				return 0;
+			}
+			way = (char)tolower((unsigned char)raw);
+			cout << "\033[2J\033[H";
+			playerMove(way);
 		torch_fuel -= FUEL_LOSS;
 	}
 	cout << "LOOOSER\nScore: " << points;

@@ -1,5 +1,5 @@
 all:
-	g++ main.cpp -o a.out
+	g++ main.cpp -o game.out
 install:
 	mkdir ./release/bin
-	mv a.out ./release/bin/maze
+	mv game.out ./release/bin/maze
